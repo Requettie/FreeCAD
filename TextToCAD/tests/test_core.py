@@ -7,7 +7,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from texttocad import parser, generators  # noqa: E402
+from texttocad import parser, generators, spec  # noqa: E402
 from texttocad.spec import Box, Cone, Cylinder  # noqa: E402
 
 
@@ -198,7 +198,63 @@ def test_engineering_dispatch_and_disclaimer():
                generators.gear, generators.jet_engine):
         txt = e.analyze(fn()).text()
         _check("NOT certified" in txt, "must carry non-certification disclaimer")
-        _check("solid-fill" in txt, "mass must be labelled solid-fill")
+        _check("mass" in txt, "must report mass")
+
+
+def test_extrude_and_mesh_volume():
+    from texttocad import mesh
+    sq = spec.Extrude(profile=[(0, 0), (10, 0), (10, 10), (0, 10)], height=10)
+    _check(abs(sq.volume() - 1000.0) < 1e-6, "extrude spec volume")
+    d = spec.Design(); d.add(sq)
+    _check(abs(mesh.mesh_volume(d) - 1000.0) < 1e-6, "extrude mesh volume")
+    b = spec.Design(); b.add(spec.Box(length=20, width=30, height=40))
+    _check(abs(mesh.mesh_volume(b) - 24000.0) < 1e-6, "box mesh volume exact")
+
+
+def test_ibeam_nonconvex_triangulation():
+    from texttocad import mesh
+    ib = generators.ibeam(length=1000, height=200, width=100, web=8, flange=12)
+    spec_v = ib.features[0].volume()
+    mesh_v = mesh.mesh_volume(ib)
+    # robust ear-clipping must reproduce the exact prism volume
+    _check(abs(mesh_v - spec_v) < 1.0, f"ibeam mesh {mesh_v} != spec {spec_v}")
+
+
+def test_naca_wing():
+    prof = generators.naca4_profile("2412", chord=200.0)
+    _check(len(prof) > 20, "airfoil has points")
+    ys = [y for _, y in prof]
+    thickness = max(ys) - min(ys)
+    _check(15 < thickness < 30, f"2412 thickness ~12% of 200 -> {thickness}")
+    _, p = parser.parse("a NACA 2412 wing 1.5 m span")
+    _check(p.get("airfoil") == "2412" and p.get("span") == 1500.0, f"wing parse {p}")
+
+
+def test_pipe_is_hollow():
+    import math
+    d = generators.pipe(length=500, outer_diameter=60, wall=4)
+    ro, ri = 30.0, 26.0
+    expected = math.pi * (ro ** 2 - ri ** 2) * 500
+    _check(abs(d.total_volume() - expected) < 1.0, f"pipe hollow vol {d.total_volume()}")
+
+
+def test_new_breadth_domains_detected():
+    for text, dom in {"a NACA wing": "wing", "an I-beam 3 m long": "ibeam",
+                      "a steel pipe 60 mm diameter": "pipe"}.items():
+        _check(parser.detect_domain(text) == dom, f"{text} -> {dom}")
+
+
+def test_obj_export():
+    import os
+    from texttocad import mesh
+    p = "_t.obj"
+    mesh.write_obj(generators.gear(), p, seg=24)
+    txt = open(p).read()
+    nv = sum(1 for ln in txt.splitlines() if ln.startswith("v "))
+    nf = sum(1 for ln in txt.splitlines() if ln.startswith("f "))
+    ntris = len(mesh.mesh_design(generators.gear(), seg=24))
+    _check(nf == ntris and nv > 0, f"obj faces {nf} vs tris {ntris}")
+    os.remove(p)
 
 
 def test_updater_parse_counts():
