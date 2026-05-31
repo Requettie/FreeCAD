@@ -1,5 +1,12 @@
 # file types to ignore
 
+# Claude Code local working files
+.claude/
+
+# Text-to-CAD generated output
+*.stl
+!TextToCAD/examples/*
+
 *.DS_Store
 *.pyc
 *.obj
