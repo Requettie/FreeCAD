@@ -172,6 +172,17 @@ def test_engineering_gear_lewis():
     _check(280 < sigma.value < 300, f"gear stress {sigma.value} MPa")
 
 
+def test_engineering_jet_tip_mach():
+    from texttocad import engineering as e
+    rep = e.analyze_jet({"fan_diameter": 1200, "blade_count": 24, "length": 3000},
+                        rpm=3000.0)
+    mach = [m for m in rep.metrics if "tip Mach" in m.name][0]
+    # v_tip = (2*pi*3000/60)*0.6 = 188.5 m/s; /340 = 0.554
+    _check(0.54 < mach.value < 0.57, f"tip Mach {mach.value}")
+    bpf = [m for m in rep.metrics if "blade-pass" in m.name][0]
+    _check(bpf.value == 1200.0, f"bpf {bpf.value}")
+
+
 def test_engineering_car_drag():
     from texttocad import engineering as e
     rep = e.analyze_car({"length": 4500, "width": 1850, "height": 1450,
@@ -184,7 +195,7 @@ def test_engineering_car_drag():
 def test_engineering_dispatch_and_disclaimer():
     from texttocad import engineering as e
     for fn in (generators.rocket, generators.gpu, generators.car,
-               generators.gear):
+               generators.gear, generators.jet_engine):
         txt = e.analyze(fn()).text()
         _check("NOT certified" in txt, "must carry non-certification disclaimer")
         _check("solid-fill" in txt, "mass must be labelled solid-fill")

@@ -207,6 +207,33 @@ def analyze_heatsink(p: dict, power_w: float = 95.0, t_ambient: float = 25.0,
 
 
 # --------------------------------------------------------------------------- #
+# Jet engine: fan tip Mach, disk loading, actuator-disk thrust
+# --------------------------------------------------------------------------- #
+def analyze_jet(p: dict, rpm: float = 3000.0, v_jet: float = 350.0,
+                a_sound: float = 340.0) -> Report:
+    rep = Report("Turbofan fan-stage estimate")
+    rfan = p["fan_diameter"] / 2000.0                 # m
+    blades = p["blade_count"]
+    omega = 2 * math.pi * rpm / 60.0                  # rad/s
+    v_tip = omega * rfan
+    A = math.pi * rfan ** 2                            # fan disk area, m^2
+    bpf = blades * rpm / 60.0                          # blade-passing freq, Hz
+
+    rep.add("fan disk area", A, "m^2", "pi*r^2")
+    rep.add("fan tip speed", v_tip, "m/s", f"omega*r, {rpm:.0f} rpm")
+    rep.add("fan tip Mach", v_tip / a_sound, "-", "keep < ~1.2 (transonic)")
+    rep.add("blade-pass freq", bpf, "Hz", "N*rpm/60 (acoustics)")
+
+    # actuator-disk static thrust: F = rho*A*v_jet^2 (very rough)
+    F = RHO_AIR * A * v_jet ** 2
+    rep.add("static thrust (ideal)", F / 1000.0, "kN",
+            f"rho*A*Vj^2, Vj={v_jet:.0f} m/s; actuator disk")
+    if v_tip / a_sound > 1.2:
+        rep.warnings.append(f"tip Mach {v_tip/a_sound:.2f} > 1.2: shock losses/noise")
+    return rep
+
+
+# --------------------------------------------------------------------------- #
 # Car: aerodynamic drag & power
 # --------------------------------------------------------------------------- #
 def analyze_car(p: dict, cd: float = 0.30, speeds_kph=(100.0, 200.0)) -> Report:
@@ -257,6 +284,9 @@ def analyze(design: "spec.Design", **opts) -> Report:
         rep = analyze_heatsink(params,
                                power_w=opts.get("power_w", params.get("default_power", 95.0)),
                                forced=opts.get("forced", True))
+    elif domain == "jet" and params:
+        rep = analyze_jet(params, rpm=opts.get("rpm", 3000.0),
+                          v_jet=opts.get("v_jet", 350.0))
     elif domain == "automotive" and params:
         rep = analyze_car(params, cd=opts.get("cd", 0.30))
     elif domain == "mechanical" and "teeth" in params:
