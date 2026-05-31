@@ -21,10 +21,18 @@ from .spec import (
 # --------------------------------------------------------------------------- #
 def rocket(total_length: float = 1000.0, body_diameter: float = 100.0,
            fin_count: int = 4, stages: int = 1) -> Design:
-    d = Design(name="Rocket", meta={"domain": "aerospace"})
+    d = Design(name="Rocket", meta={"domain": "rocket"})
     r = body_diameter / 2.0
     nose_len = body_diameter * 2.5
     body_len = total_length - nose_len
+    fin_root_chord = body_diameter * 1.2
+    fin_semispan = body_diameter * 0.9
+    d.meta["params"] = dict(
+        total_length=total_length, body_diameter=body_diameter,
+        fin_count=fin_count, stages=stages, nose_len=nose_len,
+        body_len=body_len, fin_root_chord=fin_root_chord,
+        fin_semispan=fin_semispan, nose_shape="cone",
+    )
 
     # Nose cone (ogive approximated by a tangent cone)
     d.add(Cone(name="NoseCone", radius1=r, radius2=0.0, height=nose_len,
