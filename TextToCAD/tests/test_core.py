@@ -94,6 +94,21 @@ def test_new_domains_detected():
         _check(got == expected, f"{text!r} -> {got} (want {expected})")
 
 
+def test_dimension_triple():
+    dom, p = parser.parse("a project enclosure 120 x 80 x 40 mm")
+    _check(dom == "enclosure", "enclosure")
+    _check((p["length"], p["width"], p["height"]) == (120.0, 80.0, 40.0),
+           f"triple mm {p}")
+    # unit applies to all three; 'by' separator; cm conversion
+    _, p2 = parser.parse("an enclosure 10 by 20 by 30 cm")
+    _check((p2["length"], p2["width"], p2["height"]) == (100.0, 200.0, 300.0),
+           f"triple cm {p2}")
+    # comma-separated single dims must still work (no false triple)
+    _, p3 = parser.parse("a 4.5 m long sedan, 1.85 m wide")
+    _check(p3.get("length") == 4500.0 and p3.get("width") == 1850.0,
+           f"car dims {p3}")
+
+
 def test_gear_params_and_geometry():
     d = parser.build_from_text("a 24 tooth gear")
     g = d.features[0]

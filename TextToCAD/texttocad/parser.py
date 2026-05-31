@@ -82,6 +82,22 @@ def _find_length(text: str, keywords: Tuple[str, ...],
     return _to_mm(float(m.group(1)), m.group(2)) if m else None
 
 
+def _find_triple(text: str):
+    """Parse an 'L x W x H [unit]' / 'L by W by H' dimension triple.
+
+    The unit may appear once (trailing or after any number) and applies to all
+    three; if absent, millimetres are assumed. Returns (l, w, h) in mm or None.
+    """
+    unit_re = "|".join(re.escape(u) for u in _UNITS)
+    n = rf"(\d+(?:\.\d+)?)\s*(?:{unit_re})?"
+    sep = r"\s*(?:x|by|×|\*)\s*"
+    m = re.search(rf"{n}{sep}{n}{sep}{n}\s*({unit_re})?", text)
+    if not m:
+        return None
+    unit = m.group(4) or "mm"
+    return tuple(_to_mm(float(m.group(i)), unit) for i in (1, 2, 3))
+
+
 def _find_count(text: str, keyword: str) -> Optional[int]:
     m = re.search(rf"(\d+)\s*{keyword}", text) or \
         re.search(rf"{keyword}\D{{0,8}}(\d+)", text)
@@ -137,15 +153,19 @@ def parse(text: str) -> Tuple[str, Dict]:
             params["fin_height"] = fh
 
     elif domain == "car":
-        L = _find_length(t, ("long", "length"))
-        if L:
-            params["length"] = L
-        W = _find_length(t, ("wide", "width"), fallback=False)
-        if W:
-            params["width"] = W
-        H = _find_length(t, ("tall", "height", "high"), fallback=False)
-        if H:
-            params["height"] = H
+        triple = _find_triple(t)
+        if triple:
+            params["length"], params["width"], params["height"] = triple
+        else:
+            L = _find_length(t, ("long", "length"))
+            if L:
+                params["length"] = L
+            W = _find_length(t, ("wide", "width"), fallback=False)
+            if W:
+                params["width"] = W
+            H = _find_length(t, ("tall", "height", "high"), fallback=False)
+            if H:
+                params["height"] = H
 
     elif domain == "gear":
         teeth = _find_count(t, "teeth") or _find_count(t, "tooth")
@@ -180,15 +200,19 @@ def parse(text: str) -> Tuple[str, Dict]:
             params["bolt_count"] = bolts
 
     elif domain == "enclosure":
-        L = _find_length(t, ("long", "length"))
-        if L:
-            params["length"] = L
-        W = _find_length(t, ("wide", "width"), fallback=False)
-        if W:
-            params["width"] = W
-        H = _find_length(t, ("tall", "height", "high"), fallback=False)
-        if H:
-            params["height"] = H
+        triple = _find_triple(t)
+        if triple:
+            params["length"], params["width"], params["height"] = triple
+        else:
+            L = _find_length(t, ("long", "length"))
+            if L:
+                params["length"] = L
+            W = _find_length(t, ("wide", "width"), fallback=False)
+            if W:
+                params["width"] = W
+            H = _find_length(t, ("tall", "height", "high"), fallback=False)
+            if H:
+                params["height"] = H
 
     return domain, params
 
