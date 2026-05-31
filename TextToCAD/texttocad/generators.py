@@ -101,6 +101,8 @@ def jet_engine(length: float = 3000.0, fan_diameter: float = 1200.0,
 def heatsink(base: float = 40.0, fin_count: int = 16, fin_height: float = 30.0,
              with_die: bool = True, label: str = "CPU") -> Design:
     d = Design(name=f"{label}Heatsink", meta={"domain": "electronics-thermal"})
+    d.meta["params"] = dict(base=base, fin_count=fin_count, fin_height=fin_height,
+                            label=label, default_power=250.0 if label == "GPU" else 95.0)
     base_thk = 4.0
 
     # Cold plate / base
@@ -145,6 +147,8 @@ def gpu(**kw) -> Design:
 def car(length: float = 4500.0, width: float = 1850.0, height: float = 1450.0,
         wheel_radius: float = 320.0) -> Design:
     d = Design(name="Car", meta={"domain": "automotive"})
+    d.meta["params"] = dict(length=length, width=width, height=height,
+                            wheel_radius=wheel_radius)
     body_h = height * 0.55
     cabin_h = height - body_h
 
@@ -183,6 +187,8 @@ def car(length: float = 4500.0, width: float = 1850.0, height: float = 1450.0,
 def gear(teeth: int = 20, module: float = 2.0, thickness: float = 8.0,
          bore: float = 6.0) -> Design:
     d = Design(name="Gear", meta={"domain": "mechanical"})
+    d.meta["params"] = dict(teeth=teeth, module=module, thickness=thickness,
+                            bore=bore)
     pitch_r = module * teeth / 2.0
     tooth = Box(name="Tooth", length=module * 1.2, width=module * 1.6,
                 height=thickness,
