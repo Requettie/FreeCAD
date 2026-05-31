@@ -40,6 +40,11 @@ def _shape(node: "spec.Solid"):
         s = Part.makeSphere(node.radius)
     elif k == "torus":
         s = Part.makeTorus(node.radius1, node.radius2)
+    elif k == "extrude":
+        pts = [App.Vector(x, y, 0) for x, y in node.profile]
+        pts.append(pts[0])                       # close the wire
+        face = Part.Face(Part.makePolygon(pts))
+        s = face.extrude(App.Vector(0, 0, node.height))
     elif k == "boolean":
         shapes = [_shape(c) for c in node.children]
         s = shapes[0]
@@ -98,3 +103,15 @@ def build(design: "spec.Design", doc=None):
     except Exception:
         pass
     return doc
+
+
+def export_cad(doc, path: str):
+    """Export a built document to STEP/IGES/BREP (industry interop).
+
+    Format is chosen from the extension. Requires FreeCAD.
+    """
+    if not _HAS_FREECAD:
+        raise RuntimeError("FreeCAD is required for STEP/IGES export.")
+    objs = [o for o in doc.Objects if hasattr(o, "Shape")]
+    Part.export(objs, path)
+    return path

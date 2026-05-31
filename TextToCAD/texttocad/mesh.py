@@ -136,6 +136,74 @@ def _sphere(r, seg) -> List[Tri]:
     return t
 
 
+def _poly_area2(poly) -> float:
+    a, n = 0.0, len(poly)
+    for i in range(n):
+        x1, y1 = poly[i]
+        x2, y2 = poly[(i + 1) % n]
+        a += x1 * y2 - x2 * y1
+    return a / 2.0
+
+
+def _point_in_tri(p, a, b, c) -> bool:
+    (px, py), (ax, ay), (bx, by), (cx, cy) = p, a, b, c
+    d = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy)
+    if abs(d) < 1e-12:
+        return False
+    u = ((by - cy) * (px - cx) + (cx - bx) * (py - cy)) / d
+    v = ((cy - ay) * (px - cx) + (ax - cx) * (py - cy)) / d
+    return u > 0 and v > 0 and (u + v) < 1
+
+
+def _triangulate(poly) -> List[tuple]:
+    """Ear-clipping triangulation of a simple polygon -> index triples."""
+    n = len(poly)
+    if n < 3:
+        return []
+    idx = list(range(n))
+    if _poly_area2(poly) < 0:        # ensure CCW
+        idx.reverse()
+    tris, guard = [], 0
+    while len(idx) > 3 and guard < 10 * n:
+        guard += 1
+        m = len(idx)
+        for i in range(m):
+            i0, i1, i2 = idx[(i - 1) % m], idx[i], idx[(i + 1) % m]
+            a, b, c = poly[i0], poly[i1], poly[i2]
+            cross = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+            if cross <= 0:           # reflex/collinear -> not an ear
+                continue
+            if any(j not in (i0, i1, i2) and _point_in_tri(poly[j], a, b, c)
+                   for j in idx):
+                continue
+            tris.append((i0, i1, i2))
+            del idx[i]
+            break
+        else:
+            break                    # no ear found (degenerate) -> stop
+    if len(idx) == 3:
+        tris.append((idx[0], idx[1], idx[2]))
+    return tris
+
+
+def _extrude(profile, h) -> List[Tri]:
+    poly = list(profile)
+    cap = _triangulate(poly)
+    tris: List[Tri] = []
+    for a, b, c in cap:             # bottom (normal -Z): reversed winding
+        tris.append(((poly[a][0], poly[a][1], 0), (poly[c][0], poly[c][1], 0),
+                     (poly[b][0], poly[b][1], 0)))
+    for a, b, c in cap:             # top (normal +Z)
+        tris.append(((poly[a][0], poly[a][1], h), (poly[b][0], poly[b][1], h),
+                     (poly[c][0], poly[c][1], h)))
+    n = len(poly)
+    for i in range(n):              # side walls
+        x1, y1 = poly[i]
+        x2, y2 = poly[(i + 1) % n]
+        tris += _quad((x1, y1, 0), (x2, y2, 0), (x2, y2, h), (x1, y1, h))
+    return tris
+
+
 def _torus(r1, r2, seg) -> List[Tri]:
     major, minor = seg, max(seg // 2, 3)
     pts = []
@@ -174,6 +242,8 @@ def _mesh_node(node: "spec.Solid", xf: Xf, seg: int) -> List[Tri]:
         local = _sphere(node.radius, seg)
     elif k == "torus":
         local = _torus(node.radius1, node.radius2, seg)
+    elif k == "extrude":
+        local = _extrude(node.profile, node.height)
     elif k == "boolean":
         if node.op == "union":
             out: List[Tri] = []
@@ -247,6 +317,20 @@ def write_stl(design: "spec.Design", path: str, seg: int = 48,
                 f.write("    endloop\n  endfacet\n")
             f.write(f"endsolid {name}\n")
     return path
+
+
+def mesh_volume(design: "spec.Design", seg: int = 48) -> float:
+    """Signed-tetrahedra volume of the tessellated mesh (divergence theorem).
+
+    More faithful to the actual geometry than summing spec primitives; for a
+    closed mesh it equals the enclosed volume.
+    """
+    v = 0.0
+    for (ax, ay, az), (bx, by, bz), (cx, cy, cz) in mesh_design(design, seg=seg):
+        v += (ax * (by * cz - bz * cy)
+              - ay * (bx * cz - bz * cx)
+              + az * (bx * cy - by * cx)) / 6.0
+    return abs(v)
 
 
 def bounds(design: "spec.Design", seg: int = 24):
