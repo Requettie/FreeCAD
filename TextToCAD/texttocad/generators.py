@@ -62,7 +62,9 @@ def rocket(total_length: float = 1000.0, body_diameter: float = 100.0,
 # --------------------------------------------------------------------------- #
 def jet_engine(length: float = 3000.0, fan_diameter: float = 1200.0,
                blade_count: int = 24) -> Design:
-    d = Design(name="JetEngine", meta={"domain": "aerospace"})
+    d = Design(name="JetEngine", meta={"domain": "jet"})
+    d.meta["params"] = dict(length=length, fan_diameter=fan_diameter,
+                            blade_count=blade_count)
     rfan = fan_diameter / 2.0
     rcore = rfan * 0.45
 
