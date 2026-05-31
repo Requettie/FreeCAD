@@ -4,21 +4,21 @@ $fn = 64;
 
 module Car() {
     translate([0, 0, 320]) {
-    cube([1850, 1850, 797.5]);
+    cube([4500, 1850, 797.5]);
     }
-    translate([518, 92.5, 1117.5]) {
-    cube([832.5, 1665, 652.5]);
+    translate([1260, 92.5, 1117.5]) {
+    cube([2025, 1665, 652.5]);
     }
-    translate([333, 0, 320]) rotate(a=90, v=[1, 0, 0]) {
+    translate([810, 0, 320]) rotate(a=90, v=[1, 0, 0]) {
     cylinder(h=222, r=320, $fn=$fn);
     }
-    translate([333, 1850, 320]) rotate(a=90, v=[1, 0, 0]) {
+    translate([810, 1850, 320]) rotate(a=90, v=[1, 0, 0]) {
     cylinder(h=222, r=320, $fn=$fn);
     }
-    translate([1517, 0, 320]) rotate(a=90, v=[1, 0, 0]) {
+    translate([3690, 0, 320]) rotate(a=90, v=[1, 0, 0]) {
     cylinder(h=222, r=320, $fn=$fn);
     }
-    translate([1517, 1850, 320]) rotate(a=90, v=[1, 0, 0]) {
+    translate([3690, 1850, 320]) rotate(a=90, v=[1, 0, 0]) {
     cylinder(h=222, r=320, $fn=$fn);
     }
 }

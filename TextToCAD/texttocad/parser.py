@@ -69,17 +69,29 @@ def _find_length(text: str, keywords: Tuple[str, ...],
     ``fallback=False`` so they don't steal the primary's value.
     """
     unit_re = "|".join(re.escape(u) for u in _UNITS)
-    num = rf"(\d+(?:\.\d+)?)\s*({unit_re})\b"
-    # keyword-qualified first, e.g. "length of 2 m", "2 m long"
+    num = rf"(?P<val>\d+(?:\.\d+)?)\s*(?P<unit>{unit_re})\b"
+    best = None  # (gap, value): the number nearest the keyword wins
+
+    def _consider(m):
+        nonlocal best
+        gap = len(m.group("gap"))
+        val = _to_mm(float(m.group("val")), m.group("unit"))
+        if best is None or gap < best[0]:
+            best = (gap, val)
+
     for kw in keywords:
-        m = re.search(rf"{kw}\D{{0,12}}{num}", text) or \
-            re.search(rf"{num}\D{{0,12}}{kw}", text)
-        if m:
-            return _to_mm(float(m.group(1)), m.group(2))
+        k = re.escape(kw)
+        # both orders; \D so a gap never swallows another number
+        for m in re.finditer(rf"{num}(?P<gap>\D{{0,16}}?){k}", text):
+            _consider(m)
+        for m in re.finditer(rf"{k}(?P<gap>\D{{0,16}}?){num}", text):
+            _consider(m)
+    if best is not None:
+        return best[1]
     if not fallback:
         return None
     m = re.search(num, text)
-    return _to_mm(float(m.group(1)), m.group(2)) if m else None
+    return _to_mm(float(m.group("val")), m.group("unit")) if m else None
 
 
 def _find_triple(text: str):
