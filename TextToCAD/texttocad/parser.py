@@ -35,6 +35,13 @@ _DOMAIN_ALIASES = [
     ("gpu", ("gpu", "graphics card", "video card")),
     ("cpu", ("cpu", "processor", "chip")),
     ("car", ("car", "sedan", "automobile", "vehicle")),
+    ("propeller", ("propeller", "prop")),
+    ("gear", ("gear", "cog", "sprocket")),
+    # assemblies before the generic "bolt" fastener: "bolt flange" is a flange
+    ("flange", ("flange",)),
+    ("bracket", ("bracket", "angle bracket", "l-bracket")),
+    ("enclosure", ("enclosure", "housing", "case")),
+    ("bolt", ("bolt", "screw")),
     ("heatsink", ("heatsink", "heat sink", "cooler")),
 ]
 
@@ -130,6 +137,49 @@ def parse(text: str) -> Tuple[str, Dict]:
             params["fin_height"] = fh
 
     elif domain == "car":
+        L = _find_length(t, ("long", "length"))
+        if L:
+            params["length"] = L
+        W = _find_length(t, ("wide", "width"), fallback=False)
+        if W:
+            params["width"] = W
+        H = _find_length(t, ("tall", "height", "high"), fallback=False)
+        if H:
+            params["height"] = H
+
+    elif domain == "gear":
+        teeth = _find_count(t, "teeth") or _find_count(t, "tooth")
+        if teeth:
+            params["teeth"] = teeth
+        thk = _find_length(t, ("thick", "thickness", "wide"), fallback=False)
+        if thk:
+            params["thickness"] = thk
+
+    elif domain == "propeller":
+        blades = _find_count(t, "blade")
+        if blades:
+            params["blade_count"] = blades
+        dia = _find_length(t, ("diameter", "wide"))
+        if dia:
+            params["diameter"] = dia
+
+    elif domain == "bolt":
+        L = _find_length(t, ("long", "length"))
+        if L:
+            params["length"] = L
+        dia = _find_length(t, ("diameter", "wide"), fallback=False)
+        if dia:
+            params["diameter"] = dia
+
+    elif domain == "flange":
+        dia = _find_length(t, ("diameter", "wide"))
+        if dia:
+            params["diameter"] = dia
+        bolts = _find_count(t, "bolt") or _find_count(t, "hole")
+        if bolts:
+            params["bolt_count"] = bolts
+
+    elif domain == "enclosure":
         L = _find_length(t, ("long", "length"))
         if L:
             params["length"] = L

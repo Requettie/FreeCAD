@@ -170,6 +170,97 @@ def car(length: float = 4500.0, width: float = 1850.0, height: float = 1450.0,
 
 
 # --------------------------------------------------------------------------- #
+# Spur gear
+# --------------------------------------------------------------------------- #
+def gear(teeth: int = 20, module: float = 2.0, thickness: float = 8.0,
+         bore: float = 6.0) -> Design:
+    d = Design(name="Gear", meta={"domain": "mechanical"})
+    pitch_r = module * teeth / 2.0
+    tooth = Box(name="Tooth", length=module * 1.2, width=module * 1.6,
+                height=thickness,
+                placement=Placement(pos=(pitch_r - module * 0.6,
+                                         -module * 0.8, 0)))
+    body = Boolean(op="union", children=[
+        Cylinder(name="Hub", radius=pitch_r, height=thickness),
+        PolarArray(name="Teeth", base=tooth, count=teeth, radius=pitch_r),
+    ])
+    d.add(Boolean(name="Gear", op="cut", children=[
+        body, Cylinder(name="Bore", radius=bore / 2.0, height=thickness)]))
+    return d
+
+
+# --------------------------------------------------------------------------- #
+# Propeller
+# --------------------------------------------------------------------------- #
+def propeller(blade_count: int = 3, diameter: float = 300.0,
+              hub_diameter: float = 40.0) -> Design:
+    d = Design(name="Propeller", meta={"domain": "aerospace"})
+    rhub = hub_diameter / 2.0
+    d.add(Cylinder(name="Hub", radius=rhub, height=hub_diameter * 0.6))
+    blade = Box(name="Blade", length=diameter / 2.0 - rhub,
+                width=diameter * 0.06, height=hub_diameter * 0.25,
+                placement=Placement(pos=(rhub, 0, hub_diameter * 0.18),
+                                    axis=(1, 0, 0), angle=18.0))
+    d.add(PolarArray(name="Blades", base=blade, count=blade_count, radius=rhub))
+    return d
+
+
+# --------------------------------------------------------------------------- #
+# Bolt (hex-head massing)
+# --------------------------------------------------------------------------- #
+def bolt(diameter: float = 10.0, length: float = 40.0) -> Design:
+    d = Design(name="Bolt", meta={"domain": "fastener"})
+    head_h = diameter * 0.7
+    d.add(Cylinder(name="Head", radius=diameter * 0.9, height=head_h,
+                   placement=Placement(pos=(0, 0, length))))
+    d.add(Cylinder(name="Shank", radius=diameter / 2.0, height=length))
+    return d
+
+
+# --------------------------------------------------------------------------- #
+# L-bracket
+# --------------------------------------------------------------------------- #
+def bracket(length: float = 80.0, width: float = 60.0, height: float = 80.0,
+            thickness: float = 6.0) -> Design:
+    d = Design(name="Bracket", meta={"domain": "mechanical"})
+    d.add(Box(name="Base", length=length, width=width, height=thickness))
+    d.add(Box(name="Wall", length=thickness, width=width, height=height))
+    return d
+
+
+# --------------------------------------------------------------------------- #
+# Bolt-circle flange
+# --------------------------------------------------------------------------- #
+def flange(diameter: float = 120.0, bore: float = 50.0, thickness: float = 10.0,
+           bolt_count: int = 6, bolt_hole: float = 10.0) -> Design:
+    d = Design(name="Flange", meta={"domain": "mechanical"})
+    R = diameter / 2.0
+    bolt_circle = (R + bore / 2.0) / 2.0
+    hole = Cylinder(name="BoltHole", radius=bolt_hole / 2.0, height=thickness,
+                    placement=Placement(pos=(bolt_circle, 0, 0)))
+    d.add(Boolean(name="Flange", op="cut", children=[
+        Cylinder(name="Disc", radius=R, height=thickness),
+        Cylinder(name="Bore", radius=bore / 2.0, height=thickness),
+        PolarArray(name="BoltHoles", base=hole, count=bolt_count,
+                   radius=bolt_circle),
+    ]))
+    return d
+
+
+# --------------------------------------------------------------------------- #
+# Enclosure / case (hollow shell)
+# --------------------------------------------------------------------------- #
+def enclosure(length: float = 120.0, width: float = 80.0, height: float = 40.0,
+              wall: float = 2.5) -> Design:
+    d = Design(name="Enclosure", meta={"domain": "electronics"})
+    outer = Box(name="Outer", length=length, width=width, height=height)
+    inner = Box(name="Cavity", length=length - 2 * wall, width=width - 2 * wall,
+                height=height, placement=Placement(pos=(wall, wall, wall)))
+    d.add(Boolean(name="Shell", op="cut", children=[outer, inner]))
+    return d
+
+
+# --------------------------------------------------------------------------- #
 # Registry used by the parser
 # --------------------------------------------------------------------------- #
 REGISTRY = {
@@ -181,4 +272,10 @@ REGISTRY = {
     "gpu": gpu,
     "heatsink": heatsink,
     "car": car,
+    "gear": gear,
+    "propeller": propeller,
+    "bolt": bolt,
+    "bracket": bracket,
+    "flange": flange,
+    "enclosure": enclosure,
 }

@@ -80,6 +80,64 @@ def test_cone_volume_formula():
     _check(abs(c.volume() - math.pi * 4 * 3 / 3) < 1e-9, "cone vol")
 
 
+def test_new_domains_detected():
+    cases = {
+        "a 20 tooth gear": "gear",
+        "a 3 blade propeller": "propeller",
+        "an M10 bolt 40 mm long": "bolt",
+        "an L-bracket": "bracket",
+        "a 6 bolt flange": "flange",
+        "a project enclosure": "enclosure",
+    }
+    for text, expected in cases.items():
+        got = parser.detect_domain(text)
+        _check(got == expected, f"{text!r} -> {got} (want {expected})")
+
+
+def test_gear_params_and_geometry():
+    d = parser.build_from_text("a 24 tooth gear")
+    g = d.features[0]
+    _check(g.kind == "boolean" and g.op == "cut", "gear is a cut")
+    teeth = [c for c in g.children[0].children if c.kind == "polar_array"][0]
+    _check(teeth.count == 24, f"teeth {teeth.count}")
+
+
+def test_flange_bolt_count():
+    d = parser.build_from_text("a flange with 8 bolts")
+    holes = [c for c in d.features[0].children if c.kind == "polar_array"][0]
+    _check(holes.count == 8, f"bolt holes {holes.count}")
+
+
+def test_stl_export_roundtrip(tmp="_t.stl"):
+    import os
+    from texttocad import mesh
+    d = generators.gear()
+    mesh.write_stl(d, tmp, seg=24)
+    txt = open(tmp).read()
+    n = txt.count("facet normal")
+    _check(n > 0 and txt.startswith("solid"), "ascii stl")
+    lo, hi, ntris = mesh.bounds(d, seg=24)
+    _check(ntris == n, f"bounds tris {ntris} == facets {n}")
+    os.remove(tmp)
+
+
+def test_scad_booleans():
+    from texttocad import export_scad
+    s = export_scad.to_scad(generators.flange())
+    _check("difference()" in s, "flange cut -> difference")
+    s2 = export_scad.to_scad(generators.gear())
+    _check("difference()" in s2 and "union()" in s2, "gear union+difference")
+
+
+def test_all_registry_generators_mesh():
+    from texttocad import mesh
+    for name, fn in generators.REGISTRY.items():
+        lo, hi, n = mesh.bounds(fn(), seg=12)
+        _check(n > 0, f"{name} produced no triangles")
+        for i in range(3):
+            _check(hi[i] - lo[i] > 0, f"{name} zero extent on axis {i}")
+
+
 def run():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     passed = 0
