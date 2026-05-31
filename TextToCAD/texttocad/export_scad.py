@@ -53,6 +53,10 @@ def _emit(node: "spec.Solid", indent: str = "") -> List[str]:
     elif k == "torus":
         body = [f"rotate_extrude($fn=$fn) translate([{_fmt(node.radius1)}, 0, 0]) "
                 f"circle(r={_fmt(node.radius2)}, $fn=$fn);"]
+    elif k == "extrude":
+        pts = ", ".join(f"[{_fmt(x)}, {_fmt(y)}]" for x, y in node.profile)
+        body = [f"linear_extrude(height={_fmt(node.height)}) "
+                f"polygon(points=[{pts}]);"]
     elif k == "boolean":
         op = {"union": "union", "cut": "difference", "common": "intersection"}[node.op]
         body = [op + "() {"]

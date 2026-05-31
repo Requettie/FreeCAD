@@ -90,6 +90,26 @@ class Torus(Solid):
         return 2.0 * math.pi ** 2 * self.radius1 * self.radius2 ** 2
 
 
+@dataclass
+class Extrude(Solid):
+    """A closed 2D polygon (list of (x, y)) extruded along +Z by ``height``."""
+    profile: List[Tuple[float, float]] = field(default_factory=list)
+    height: float = 1.0
+    kind: str = "extrude"
+
+    def area(self) -> float:
+        # shoelace formula
+        a, n = 0.0, len(self.profile)
+        for i in range(n):
+            x1, y1 = self.profile[i]
+            x2, y2 = self.profile[(i + 1) % n]
+            a += x1 * y2 - x2 * y1
+        return abs(a) / 2.0
+
+    def volume(self) -> float:
+        return self.area() * self.height
+
+
 # --------------------------------------------------------------------------- #
 # Combinators
 # --------------------------------------------------------------------------- #
