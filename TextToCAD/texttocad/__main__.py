@@ -23,7 +23,7 @@ def main(argv=None) -> int:
                                  description="Generate CAD from a text prompt.")
     ap.add_argument("prompt", help="natural-language description of the part")
     ap.add_argument("-o", "--output", help="output file (.stl or .scad)")
-    ap.add_argument("-f", "--format", choices=["stl", "scad"],
+    ap.add_argument("-f", "--format", choices=["stl", "scad", "obj"],
                     help="force output format (else inferred from -o)")
     ap.add_argument("--segments", type=int, default=64,
                     help="tessellation resolution for STL/curves")
