@@ -4,9 +4,9 @@ $fn = 64;
 
 module Enclosure() {
 difference() {
-    cube([40, 80, 40]);
+    cube([120, 80, 40]);
     translate([2.5, 2.5, 2.5]) {
-        cube([35, 75, 40]);
+        cube([115, 75, 40]);
     }
 }
 }

@@ -89,13 +89,14 @@ def _find_triple(text: str):
     three; if absent, millimetres are assumed. Returns (l, w, h) in mm or None.
     """
     unit_re = "|".join(re.escape(u) for u in _UNITS)
-    n = rf"(\d+(?:\.\d+)?)\s*(?:{unit_re})?"
+    n = rf"(\d+(?:\.\d+)?)\s*({unit_re})?"   # number + optional unit (captured)
     sep = r"\s*(?:x|by|×|\*)\s*"
-    m = re.search(rf"{n}{sep}{n}{sep}{n}\s*({unit_re})?", text)
+    m = re.search(rf"{n}{sep}{n}{sep}{n}", text)
     if not m:
         return None
-    unit = m.group(4) or "mm"
-    return tuple(_to_mm(float(m.group(i)), unit) for i in (1, 2, 3))
+    # a unit may sit after any of the three numbers; prefer the last given
+    unit = m.group(6) or m.group(4) or m.group(2) or "mm"
+    return tuple(_to_mm(float(m.group(i)), unit) for i in (1, 3, 5))
 
 
 def _find_count(text: str, keyword: str) -> Optional[int]:
