@@ -62,6 +62,7 @@ each tagged with the formula it came from:
 | Domain | Metrics | Source |
 |---|---|---|
 | Rocket | fineness ratio, CNa, CP, CG, **static margin**, ideal Δv | Barrowman 1967; Tsiolkovsky |
+| Jet engine | fan disk area, tip speed, **tip Mach**, blade-pass freq, ideal thrust | actuator-disk / fan acoustics |
 | Heatsink | fin efficiency, effective area, thermal resistance, junction temp | Incropera fin theory |
 | Car | frontal area, Cd·A, drag force & power vs. speed | Hucho |
 | Gear | pitch dia, tangential load, Lewis form factor, bending stress | AGMA / Lewis |
