@@ -8,8 +8,13 @@ Describe a part in plain English and get parametric CAD geometry. Built to run
 python -m texttocad "a 2 metre rocket with 6 fins and 2 stages" -o rocket.stl
 python -m texttocad "a turbofan jet engine 3 m long with 28 blades" -o jet.scad
 python -m texttocad "a GPU heatsink with 24 fins" -o cooler.stl
-python -m texttocad "a 24 tooth gear" --print
+python -m texttocad "a 2 m rocket with 6 fins" --analyze        # engineering report
 ```
+
+> **Not certified.** These are parametric geometry + first-order engineering
+> *estimates* from published formulas. They are not FEA/CFD, not physical test,
+> and carry no PE stamp or regulatory certification. See *Engineering analysis*
+> and *Honest limitations* below.
 
 ## What it can build today
 
