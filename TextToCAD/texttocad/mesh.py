@@ -319,6 +319,29 @@ def write_stl(design: "spec.Design", path: str, seg: int = 48,
     return path
 
 
+def write_obj(design: "spec.Design", path: str, seg: int = 48) -> str:
+    """Write a Wavefront OBJ (widely importable: Blender, MeshLab, etc.)."""
+    tris = mesh_design(design, seg=seg)
+    verts, index = [], {}
+    faces = []
+    for tri in tris:
+        f = []
+        for v in tri:
+            key = (round(v[0], 6), round(v[1], 6), round(v[2], 6))
+            if key not in index:
+                index[key] = len(verts)
+                verts.append(key)
+            f.append(index[key] + 1)        # OBJ is 1-indexed
+        faces.append(f)
+    with open(path, "w", encoding="ascii") as fh:
+        fh.write(f"# Text-to-CAD OBJ: {design.name}\n")
+        for v in verts:
+            fh.write(f"v {v[0]:.6f} {v[1]:.6f} {v[2]:.6f}\n")
+        for f in faces:
+            fh.write(f"f {f[0]} {f[1]} {f[2]}\n")
+    return path
+
+
 def mesh_volume(design: "spec.Design", seg: int = 48) -> float:
     """Signed-tetrahedra volume of the tessellated mesh (divergence theorem).
 

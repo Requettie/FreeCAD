@@ -92,10 +92,11 @@ def mass_properties(design: "spec.Design", material: str = "aluminium",
                     report: Optional[Report] = None) -> Report:
     rep = report or Report(f"{design.name} mass properties")
     density, _ = MATERIALS.get(material.lower(), MATERIALS["aluminium"])
-    vol_mm3 = design.total_volume()
+    from . import mesh
+    vol_mm3 = mesh.mesh_volume(design)          # true tessellated volume
     vol_m3 = vol_mm3 * 1e-9
     rep.add("solid volume", vol_mm3, "mm^3",
-            "spec volume; boolean cuts approximate")
+            "tessellated mesh volume; boolean cuts approximate")
     rep.add("mass (solid-fill)", vol_m3 * density, "kg",
             f"UPPER BOUND, treats part as solid {material} (real parts are hollow)")
     rep.add("surface area", surface_area_mm2(design) / 100.0, "cm^2", "mesh sum")

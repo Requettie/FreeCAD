@@ -35,6 +35,9 @@ _DOMAIN_ALIASES = [
     ("gpu", ("gpu", "graphics card", "video card")),
     ("cpu", ("cpu", "processor", "chip")),
     ("car", ("car", "sedan", "automobile", "vehicle")),
+    ("wing", ("wing", "airfoil", "aerofoil")),
+    ("ibeam", ("i-beam", "ibeam", "i beam", "girder", "beam")),
+    ("pipe", ("pipe", "tube", "tubing")),
     ("propeller", ("propeller", "prop")),
     ("gear", ("gear", "cog", "sprocket")),
     # assemblies before the generic "bolt" fastener: "bolt flange" is a flange
@@ -179,6 +182,36 @@ def parse(text: str) -> Tuple[str, Dict]:
             H = _find_length(t, ("tall", "height", "high"), fallback=False)
             if H:
                 params["height"] = H
+
+    elif domain == "wing":
+        span = _find_length(t, ("span", "long", "length"))
+        if span:
+            params["span"] = span
+        chord = _find_length(t, ("chord", "wide", "width"), fallback=False)
+        if chord:
+            params["chord"] = chord
+        m = re.search(r"naca\s*(\d{4})", t)
+        if m:
+            params["airfoil"] = m.group(1)
+
+    elif domain == "ibeam":
+        L = _find_length(t, ("long", "length"))
+        if L:
+            params["length"] = L
+        H = _find_length(t, ("tall", "height", "deep", "high"), fallback=False)
+        if H:
+            params["height"] = H
+
+    elif domain == "pipe":
+        L = _find_length(t, ("long", "length"))
+        if L:
+            params["length"] = L
+        dia = _find_length(t, ("diameter", "od", "outer", "wide"), fallback=False)
+        if dia:
+            params["outer_diameter"] = dia
+        w = _find_length(t, ("wall", "thick"), fallback=False)
+        if w:
+            params["wall"] = w
 
     elif domain == "gear":
         teeth = _find_count(t, "teeth") or _find_count(t, "tooth")

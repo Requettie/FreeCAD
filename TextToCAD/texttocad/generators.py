@@ -9,9 +9,11 @@ FreeCAD. These are *templates*, not certified engineering models.
 
 from __future__ import annotations
 
+import math
+
 from . import spec
 from .spec import (
-    Box, Boolean, Cone, Cylinder, Design, LinearArray, Placement,
+    Box, Boolean, Cone, Cylinder, Design, Extrude, LinearArray, Placement,
     PolarArray, Solid, Sphere, Torus,
 )
 
@@ -277,6 +279,82 @@ def enclosure(length: float = 120.0, width: float = 80.0, height: float = 40.0,
 
 
 # --------------------------------------------------------------------------- #
+# NACA 4-digit airfoil wing
+# --------------------------------------------------------------------------- #
+def naca4_profile(code: str = "2412", chord: float = 200.0, n: int = 40):
+    """Return a closed list of (x, y) points for a NACA 4-digit airfoil."""
+    m = int(code[0]) / 100.0          # max camber
+    p = int(code[1]) / 10.0           # camber position
+    t = int(code[2:]) / 100.0         # thickness
+    upper, lower = [], []
+    for i in range(n + 1):
+        beta = math.pi * i / n
+        x = (1 - math.cos(beta)) / 2.0    # cosine spacing
+        yt = 5 * t * (0.2969 * math.sqrt(x) - 0.1260 * x - 0.3516 * x * x
+                      + 0.2843 * x ** 3 - 0.1015 * x ** 4)
+        if p > 0 and 0 < x < 1:
+            if x < p:
+                yc = m / (p * p) * (2 * p * x - x * x)
+                dyc = 2 * m / (p * p) * (p - x)
+            else:
+                yc = m / ((1 - p) ** 2) * ((1 - 2 * p) + 2 * p * x - x * x)
+                dyc = 2 * m / ((1 - p) ** 2) * (p - x)
+        else:
+            yc, dyc = 0.0, 0.0
+        th = math.atan(dyc)
+        upper.append(((x - yt * math.sin(th)) * chord,
+                      (yc + yt * math.cos(th)) * chord))
+        lower.append(((x + yt * math.sin(th)) * chord,
+                      (yc - yt * math.cos(th)) * chord))
+    # closed loop: upper LE->TE then lower TE->LE
+    return upper + lower[::-1][1:-1]
+
+
+def wing(span: float = 1000.0, chord: float = 200.0, airfoil: str = "2412") -> Design:
+    d = Design(name="Wing", meta={"domain": "aerospace"})
+    d.meta["params"] = dict(span=span, chord=chord, airfoil=airfoil)
+    prof = naca4_profile(airfoil, chord=chord)
+    # extrude along Z (span), then it's a constant-section wing
+    d.add(Extrude(name="WingBox", profile=prof, height=span))
+    return d
+
+
+# --------------------------------------------------------------------------- #
+# I-beam (structural section, extruded profile)
+# --------------------------------------------------------------------------- #
+def ibeam(length: float = 1000.0, height: float = 200.0, width: float = 100.0,
+          web: float = 8.0, flange: float = 12.0) -> Design:
+    d = Design(name="IBeam", meta={"domain": "structural"})
+    d.meta["params"] = dict(length=length, height=height, width=width,
+                            web=web, flange=flange)
+    hw, hh = width / 2.0, height / 2.0
+    tw = web / 2.0
+    # I-section profile (CCW), centred on origin
+    prof = [
+        (-hw, -hh), (hw, -hh), (hw, -hh + flange), (tw, -hh + flange),
+        (tw, hh - flange), (hw, hh - flange), (hw, hh), (-hw, hh),
+        (-hw, hh - flange), (-tw, hh - flange), (-tw, -hh + flange),
+        (-hw, -hh + flange),
+    ]
+    d.add(Extrude(name="Section", profile=prof, height=length))
+    return d
+
+
+# --------------------------------------------------------------------------- #
+# Pipe / tube (hollow cylinder)
+# --------------------------------------------------------------------------- #
+def pipe(length: float = 500.0, outer_diameter: float = 60.0,
+         wall: float = 4.0) -> Design:
+    d = Design(name="Pipe", meta={"domain": "mechanical"})
+    d.meta["params"] = dict(length=length, outer_diameter=outer_diameter, wall=wall)
+    ro = outer_diameter / 2.0
+    d.add(Boolean(name="Pipe", op="cut", children=[
+        Cylinder(name="Outer", radius=ro, height=length),
+        Cylinder(name="Bore", radius=ro - wall, height=length)]))
+    return d
+
+
+# --------------------------------------------------------------------------- #
 # Registry used by the parser
 # --------------------------------------------------------------------------- #
 REGISTRY = {
@@ -294,4 +372,7 @@ REGISTRY = {
     "bracket": bracket,
     "flange": flange,
     "enclosure": enclosure,
+    "wing": wing,
+    "ibeam": ibeam,
+    "pipe": pipe,
 }
