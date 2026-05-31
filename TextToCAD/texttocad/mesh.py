@@ -145,42 +145,56 @@ def _poly_area2(poly) -> float:
     return a / 2.0
 
 
-def _point_in_tri(p, a, b, c) -> bool:
-    (px, py), (ax, ay), (bx, by), (cx, cy) = p, a, b, c
-    d = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy)
+def _point_in_tri_incl(p, a, b, c, eps=1e-9) -> bool:
+    """Inclusive point-in-triangle (on-edge counts as inside)."""
+    d = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1])
     if abs(d) < 1e-12:
         return False
-    u = ((by - cy) * (px - cx) + (cx - bx) * (py - cy)) / d
-    v = ((cy - ay) * (px - cx) + (ax - cx) * (py - cy)) / d
-    return u > 0 and v > 0 and (u + v) < 1
+    u = ((b[1] - c[1]) * (p[0] - c[0]) + (c[0] - b[0]) * (p[1] - c[1])) / d
+    v = ((c[1] - a[1]) * (p[0] - c[0]) + (a[0] - c[0]) * (p[1] - c[1])) / d
+    w = 1.0 - u - v
+    return u >= -eps and v >= -eps and w >= -eps
 
 
 def _triangulate(poly) -> List[tuple]:
-    """Ear-clipping triangulation of a simple polygon -> index triples."""
+    """Robust ear-clipping for a simple polygon -> index triples.
+
+    Only reflex vertices are tested for containment (a convex vertex can never
+    sit inside an ear), with inclusive containment so triangles are never
+    clipped across a concavity whose reflex point lies on an edge.
+    """
     n = len(poly)
     if n < 3:
         return []
     idx = list(range(n))
     if _poly_area2(poly) < 0:        # ensure CCW
         idx.reverse()
+
+    def convex(p, c, nx):
+        a, b, d = poly[p], poly[c], poly[nx]
+        return (b[0] - a[0]) * (d[1] - a[1]) - (b[1] - a[1]) * (d[0] - a[0]) > 0
+
     tris, guard = [], 0
-    while len(idx) > 3 and guard < 10 * n:
+    while len(idx) > 3 and guard < 1000 * n:
         guard += 1
         m = len(idx)
+        reflex = {idx[i] for i in range(m)
+                  if not convex(idx[(i - 1) % m], idx[i], idx[(i + 1) % m])}
+        clipped = False
         for i in range(m):
             i0, i1, i2 = idx[(i - 1) % m], idx[i], idx[(i + 1) % m]
-            a, b, c = poly[i0], poly[i1], poly[i2]
-            cross = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
-            if cross <= 0:           # reflex/collinear -> not an ear
+            if i1 in reflex:
                 continue
-            if any(j not in (i0, i1, i2) and _point_in_tri(poly[j], a, b, c)
-                   for j in idx):
+            a, b, c = poly[i0], poly[i1], poly[i2]
+            if any(r not in (i0, i1, i2) and _point_in_tri_incl(poly[r], a, b, c)
+                   for r in reflex):
                 continue
             tris.append((i0, i1, i2))
             del idx[i]
+            clipped = True
             break
-        else:
-            break                    # no ear found (degenerate) -> stop
+        if not clipped:
+            break
     if len(idx) == 3:
         tris.append((idx[0], idx[1], idx[2]))
     return tris
