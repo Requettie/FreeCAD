@@ -38,9 +38,11 @@ Ready-to-open results for each are in [`examples/`](examples/).
 
 1. **FreeCAD workbench** — copy this `TextToCAD/` folder into your FreeCAD
    `Mod/` directory (Help → About FreeCAD → User config, then go up to `Mod/`),
-   restart, pick **Text-to-CAD** from the workbench dropdown, click the toolbar
-   button and type a prompt. Geometry is built with the OpenCASCADE kernel via
-   FreeCAD's `Part` API.
+   restart, pick **Text-to-CAD** from the workbench dropdown. You get a toolbar
+   with the text prompt **and interactive parameter dialogs for all five
+   flagship domains** (rocket, jet engine, CPU cooler, GPU cooler, car) — each
+   dialog has an "also run engineering analysis" checkbox. Geometry is built
+   with the OpenCASCADE kernel via FreeCAD's `Part` API.
 2. **Command line** — `python -m texttocad "..." -o out.stl|out.scad`.
    `.scad` gives true CSG booleans (open in OpenSCAD); `.stl` gives a viewable
    mesh anywhere.
@@ -51,6 +53,39 @@ Ready-to-open results for each are in [`examples/`](examples/).
    texttocad.text_to_stl("a 24 tooth gear", "gear.stl")
    texttocad.text_to_scad("a 6 bolt flange", "flange.scad")
    ```
+
+## Engineering analysis (estimates, NOT certification)
+
+`--analyze` (CLI) or the dialog checkbox prints first-order engineering metrics,
+each tagged with the formula it came from:
+
+| Domain | Metrics | Source |
+|---|---|---|
+| Rocket | fineness ratio, CNa, CP, CG, **static margin**, ideal Δv | Barrowman 1967; Tsiolkovsky |
+| Heatsink | fin efficiency, effective area, thermal resistance, junction temp | Incropera fin theory |
+| Car | frontal area, Cd·A, drag force & power vs. speed | Hucho |
+| Gear | pitch dia, tangential load, Lewis form factor, bending stress | AGMA / Lewis |
+| Any | solid-fill mass (upper bound), surface area | geometry |
+
+```
+$ python -m texttocad "a 2 m rocket with 6 fins" --analyze
+== Rocket aerodynamic & performance estimate ==
+(engineering-grade estimate, NOT certified)
+  static margin            5.74 cal   [(CP-CG)/d; stable 1-2]
+  ideal Delta-v        3.95e+03 m/s   [Tsiolkovsky; Isp=250s, prop frac=0.80]
+  ...
+```
+
+These are sizing/sanity-check tools. **They do not certify anything** — see
+*Honest limitations*.
+
+## Auto-update from your fork
+
+The workbench polls your GitHub fork every 5 minutes (off the UI thread). When
+new commits are detected it shows a notice in the **bottom-corner status bar**
+with an **Update** button (fast-forward `git pull`), and adds **Check for
+Updates** under the File menu. Requires the module to live inside a git checkout
+of your fork.
 
 ## Optional: smarter parsing with Claude
 
