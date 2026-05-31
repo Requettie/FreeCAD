@@ -124,8 +124,13 @@ class Boolean(Solid):
             return 0.0
         if self.op == "union":
             return sum(c.volume() for c in self.children)
-        # cut/common: best-effort estimate (real value comes from the kernel)
-        return self.children[0].volume()
+        if self.op == "cut":
+            # assume subtracted features lie inside the first solid (the typical
+            # generator case: bore in a disc, cavity in a box). Clamp >= 0.
+            return max(self.children[0].volume()
+                       - sum(c.volume() for c in self.children[1:]), 0.0)
+        # common: bounded above by the smallest operand
+        return min(c.volume() for c in self.children)
 
 
 @dataclass
