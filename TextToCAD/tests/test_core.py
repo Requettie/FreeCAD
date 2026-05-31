@@ -153,6 +153,50 @@ def test_all_registry_generators_mesh():
             _check(hi[i] - lo[i] > 0, f"{name} zero extent on axis {i}")
 
 
+def test_engineering_rocket_deltav():
+    from texttocad import engineering as e
+    import math
+    rep = e.analyze_rocket(generators.rocket().meta["params"],
+                           isp=300, prop_mass_fraction=0.9)
+    dv = [m for m in rep.metrics if "Delta-v" in m.name][0]
+    expected = 300 * e.G0 * math.log(1 / (1 - 0.9))
+    _check(abs(dv.value - expected) < 1.0, f"dv {dv.value} vs {expected}")
+
+
+def test_engineering_gear_lewis():
+    from texttocad import engineering as e
+    rep = e.analyze_gear({"teeth": 20, "module": 2.0, "thickness": 8.0,
+                          "bore": 6.0}, torque_nm=10.0)
+    sigma = [m for m in rep.metrics if "bending" in m.name][0]
+    # Wt=500N, F=0.008, m=0.002, Y=0.108 -> ~289 MPa
+    _check(280 < sigma.value < 300, f"gear stress {sigma.value} MPa")
+
+
+def test_engineering_car_drag():
+    from texttocad import engineering as e
+    rep = e.analyze_car({"length": 4500, "width": 1850, "height": 1450,
+                         "wheel_radius": 320}, cd=0.30, speeds_kph=(100.0,))
+    f = [m for m in rep.metrics if "drag @ 100" in m.name][0]
+    # 0.5*1.225*0.30*(1.85*1.45)*(27.78^2) ~ 380 N
+    _check(350 < f.value < 410, f"car drag {f.value} N")
+
+
+def test_engineering_dispatch_and_disclaimer():
+    from texttocad import engineering as e
+    for fn in (generators.rocket, generators.gpu, generators.car,
+               generators.gear):
+        txt = e.analyze(fn()).text()
+        _check("NOT certified" in txt, "must carry non-certification disclaimer")
+        _check("solid-fill" in txt, "mass must be labelled solid-fill")
+
+
+def test_updater_parse_counts():
+    from texttocad import updater
+    _check(updater._parse_counts("0\t0") == (0, 0), "zero")
+    _check(updater._parse_counts("2\t5") == (5, 2), "ahead2 behind5")
+    _check(updater._parse_counts("garbage") is None, "bad input")
+
+
 def run():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     passed = 0

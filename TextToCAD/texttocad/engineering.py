@@ -96,7 +96,8 @@ def mass_properties(design: "spec.Design", material: str = "aluminium",
     vol_m3 = vol_mm3 * 1e-9
     rep.add("solid volume", vol_mm3, "mm^3",
             "spec volume; boolean cuts approximate")
-    rep.add("mass", vol_m3 * density, "kg", f"{material}, rho={density:.0f} kg/m^3")
+    rep.add("mass (solid-fill)", vol_m3 * density, "kg",
+            f"UPPER BOUND, treats part as solid {material} (real parts are hollow)")
     rep.add("surface area", surface_area_mm2(design) / 100.0, "cm^2", "mesh sum")
     return rep
 

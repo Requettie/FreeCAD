@@ -33,6 +33,10 @@ def main(argv=None) -> int:
                     help="use Claude for prompt parsing if API key is set")
     ap.add_argument("--print", dest="show", action="store_true",
                     help="print the design summary and exit")
+    ap.add_argument("--analyze", action="store_true",
+                    help="print engineering-grade analysis (NOT certification)")
+    ap.add_argument("--material", default="aluminium",
+                    help="material for mass properties (default aluminium)")
     args = ap.parse_args(argv)
 
     try:
@@ -42,7 +46,12 @@ def main(argv=None) -> int:
         return 2
 
     print(design.summary(), file=sys.stderr)
-    if args.show and not args.output:
+
+    if args.analyze:
+        from . import engineering
+        print(engineering.analyze(design, material=args.material).text())
+
+    if (args.show or args.analyze) and not args.output:
         return 0
 
     fmt = args.format

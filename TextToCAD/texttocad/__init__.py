@@ -29,3 +29,9 @@ def text_to_scad(text: str, path: str, fn: int = 64, use_llm: bool = False) -> s
     from . import export_scad
     return export_scad.write_scad(design_from_text(text, use_llm=use_llm),
                                   path, fn=fn)
+
+
+def analyze_text(text: str, use_llm: bool = False, **opts):
+    """Prompt -> engineering-grade analysis Report (NOT certification)."""
+    from . import engineering
+    return engineering.analyze(design_from_text(text, use_llm=use_llm), **opts)
